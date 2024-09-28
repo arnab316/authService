@@ -29,6 +29,7 @@ const handleError = (res, error) => {
 const signup = async (req, res) => {
     try {
         const data = req.body;  // Get data from request body
+        console.log('data received'+ data);
         const auth = await authService.signup(data);
 await logMessage('authController', 'info', `Signup successful for user ${data.userId}`);        
         return res.status(StatusCodes.CREATED).json({
@@ -37,6 +38,7 @@ await logMessage('authController', 'info', `Signup successful for user ${data.us
             data: auth,
         });
     } catch (error) {
+        console.log(error);
  await logMessage('authController', 'error', `Signup failed: ${error.message}`);        
  handleError(res, error)
     }

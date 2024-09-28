@@ -76,7 +76,8 @@ await logMessage('authService', 'error', `Error during validate token ${error.me
         await logMessage('authService', 'info', `User ${data.userId} signed up successfully`);
         return auth;
         } catch (error) {
-            console.error('Signup error:', error);
+
+            console.log(error);
             if (error.name === 'SequelizeValidationError') {
                 throw new ValidationError(error);
               }else if (error.name === 'SequelizeForeignKeyConstraintError') {
