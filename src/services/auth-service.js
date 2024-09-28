@@ -98,7 +98,7 @@ await logMessage('authService', 'error', `Error during validate token ${error.me
     async signin(data){
         try {
             const { userId, password: plainPassword } = data;
-            const auth = await this.authRepository.getById(userId);
+            const auth = await this.authRepository.getByField('userId', userId);
             if (!auth) {
                 throw new AppError('AuthenticationError', 'User not found', 'No user found with this ID');
             }
