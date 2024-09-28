@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const AppError = require('../utils/error-handler');
 const ValidationError = require('../utils/validation-error')
+const ForeignKeyError = require('../utils/foreignkey-error')
 const {JWT_KEY} = require('../config/server-config')
 const {logMessage} = require('../utils/log-service')
 
@@ -69,15 +70,17 @@ await logMessage('authService', 'error', `Error during validate token ${error.me
             token,
             expireAt
         };
-
         // Call the repository to create the new auth record
         const auth = await this.authRepository.create(authData);
         //* log service
         await logMessage('authService', 'info', `User ${data.userId} signed up successfully`);
         return auth;
         } catch (error) {
+            console.error('Signup error:', error);
             if (error.name === 'SequelizeValidationError') {
                 throw new ValidationError(error);
+              }else if (error.name === 'SequelizeForeignKeyConstraintError') {
+                throw new ForeignKeyError(error);
               }
 //* log service              
  await logMessage('authService', 'error', `Error during signup for user ${data.userId}: ${error.message}`);              

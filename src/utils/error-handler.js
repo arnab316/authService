@@ -9,7 +9,7 @@ class AppError extends Error{
     statusCode= StatusCodes.INTERNAL_SERVER_ERROR,
   )
   {
-    super();
+    super(message);
     this.name = name;
     this.message = message;
     this.description = description;

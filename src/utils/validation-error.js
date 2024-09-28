@@ -8,9 +8,14 @@ class ValidationError extends AppError {
     constructor(error){
         let errorName = error.name;
         let explanation = [];
-        error.errors.forEach((err)=>{
-            explanation.push(`${err.path}: ${err.message}`);
-        })
+        if (error.errors && Array.isArray(error.errors)) {
+            error.errors.forEach((err) => {
+                explanation.push(`${err.path}: ${err.message}`);
+            });
+        }else {
+            // Fallback if no specific validation errors are available
+            explanation.push(error.message || 'Validation error occurred');
+        }
         super(
             errorName,
             message = 'Validation failed ',

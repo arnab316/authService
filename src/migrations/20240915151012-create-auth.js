@@ -14,12 +14,6 @@ module.exports = {
       },
       userId: {
         type: Sequelize.INTEGER,
-        // references: {
-        //   model: 'Users',  // Name of the table you're referencing
-        //   key: 'id'        // Primary key in the User table
-        // },
-        // onDelete: 'CASCADE',
-        // onUpdate: 'CASCADE',
         allowNull: false
       },
       passwordhash: {

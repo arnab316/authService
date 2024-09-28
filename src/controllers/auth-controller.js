@@ -38,11 +38,7 @@ await logMessage('authController', 'info', `Signup successful for user ${data.us
         });
     } catch (error) {
  await logMessage('authController', 'error', `Signup failed: ${error.message}`);        
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            success: false,
-            message: error.message,
-            error: error
-        })
+ handleError(res, error)
     }
 };
 //? controller for login
