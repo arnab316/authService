@@ -7,39 +7,130 @@ const ValidationError = require('../utils/validation-error')
 const ForeignKeyError = require('../utils/foreignkey-error')
 const {JWT_KEY} = require('../config/server-config')
 const {logMessage} = require('../utils/log-service')
-
+const moment = require('moment');
 class AuthService {
     constructor() {
         this.authRepository = new AuthRepository();
     }
 
 
+//* for validate tokens
+async validateToken(token) {
+    try {
 
-    async validateToken(token) {
-        try {
-            const decoded = jwt.verify(token, JWT_KEY);
-            const authRecord = await this.authRepository.getByField('token', token);
-            if (!authRecord) {
-                throw new AppError('UnauthorizedError', 
-                    'an error in validate token',
-                    'Token not found or revoked', 401);
-            }
-            const isTokenExpired = new Date() > new Date(authRecord.expireAt);
-            if (isTokenExpired) {
-                throw new AppError('UnauthorizedError', 'error','Token has expired', 401);
-            }
-await logMessage('authService', 'info', `User ${token} signed up successfully`);           
-            return decoded;
-        } catch (error) {
-await logMessage('authService', 'error', `Error during validate token ${error.message}`);             
+        // Verify the JWT token
+        const decoded = jwt.verify(token, JWT_KEY);
+
+        // Token is valid and not expired, proceed with fetching the auth record
+        const authRecord = await this.authRepository.getByField('token', token);
+        if (!authRecord) {
             throw new AppError(
                 'UnauthorizedError',
-                'Token is invalid or expired',
-                error.message,
+                'Validation Error',
+                'Token not found or revoked',
+                401
+            );
+        }
+
+        return decoded;
+
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            console.error("Token validation failed: Token has expired at", error.expiredAt);
+            throw new AppError(
+                'UnauthorizedError',
+                'Token Expired',
+                'The provided token has expired. Please log in again.',
+                401
+            );
+        } else {
+            console.error("Error during token validation:", error);
+            throw new AppError(
+                'UnauthorizedError',
+                'Token Invalid',
+                'The provided token is invalid or malformed.',
                 401
             );
         }
     }
+}
+
+//* for user  login 
+async signin(data) {
+    try {
+        const { userId, password: plainPassword } = data;
+
+        // Fetch user authentication details
+        const auth = await this.authRepository.getByField('userId', userId);
+        if (!auth) {
+            throw new AppError('AuthenticationError', 'User not found', 'No user found with this ID');
+        }
+
+        // Verify password
+        const passwordsMatch = await this.checkPassword(plainPassword, auth.passwordhash);
+        if (!passwordsMatch) {
+            throw new AppError('AuthenticationError', 'Invalid password', 'Password does not match');
+        }
+
+        // Log the current expireAt timestamp
+        console.log(`Current expireAt for user ${userId}: ${auth.expireAt}`);
+
+        // Get current time
+        const currentTimestamp =  moment().utc().unix();
+        const expireAtTimestamp = moment(auth.expireAt).utc().unix();
+
+        console.log('Current Timestamp:', currentTimestamp);
+        console.log('Expire At Timestamp:', expireAtTimestamp);
+        // Log and check if the token or expireAt timestamp needs to be updated
+        if (!auth.token || expireAtTimestamp < currentTimestamp) {
+            console.log('Condition met, generating new token for user:', userId);
+            //* Generate new token and expiration time
+            const token = jwt.sign(
+                { userId: auth.userId },
+        JWT_KEY,
+        { expiresIn: '24h' } 
+            );
+            //* Update Auth Object 
+            auth.token = token;
+            auth.expireAt =  moment().utc().add(24, 'hours').toISOString(); // Set to 24 hours from now
+            
+            // Explicitly set `expireAt` to ensure Sequelize recognizes it as updated
+            auth.setDataValue('expireAt', auth.expireAt);
+
+            //  save and check if `expireAt` persists correctly
+            try {
+                await auth.save();
+                console.log(`Updated expireAt for user ${userId}: ${auth.expireAt}`);
+            } catch (error) {
+                console.log("Error saving auth with new expireAt:", error);
+            }
+        }else {
+            console.log('Token is still valid; no new token generated.');
+        }
+
+        //* logger
+        await logMessage('authService', 'info', `User ${userId} signed in successfully`);
+
+        return {
+            userId: auth.userId,
+            token: auth.token,
+        };
+    } catch (error) {
+        if (error instanceof AppError) {
+            throw error;
+        }
+
+        //* Log unexpected errors
+        await logMessage('authService', 'error', `Error during signin for user ${data.userId}: ${error.message}`);
+        throw new AppError(
+            'InternalServerError', 
+            'An unexpected error occurred while fetching data', 
+            error.message
+        );
+    }
+}
+
+
     async getAllAuth() {
         try {
             return await this.authRepository.getAll();
@@ -94,39 +185,6 @@ await logMessage('authService', 'error', `Error during validate token ${error.me
 
     }
 
-
-    async signin(data){
-        try {
-            const { userId, password: plainPassword } = data;
-            const auth = await this.authRepository.getByField('userId', userId);
-            if (!auth) {
-                throw new AppError('AuthenticationError', 'User not found', 'No user found with this ID');
-            }
-            const passwordsMatch = await this.checkPassword(plainPassword, auth.passwordhash);
-            if (!passwordsMatch) {
-                throw new AppError('AuthenticationError', 'Invalid password', 'Password does not match');
-            }
-            const token = jwt.sign({ userId: auth.userId }, JWT_KEY, {
-                expiresIn: '1h',
-            });
-//* log service            
- await logMessage('authService', 'info', `User ${userId} signed in successfully`);
-            return {
-                userId: auth.userId,
-                token,
-            };
-        } catch (error) {
-            if( error instanceof AppError){
-                throw error;
-            }
-//* log service            
-  await logMessage('authService', 'error', `Error during signin for user ${data.userId}: ${error.message}`);
-                throw new AppError('InternalServerError', 
-                    'An unexpected error occurred while fetching data', 
-                    error.message);
-            
-        }
-    }
 
     // ? validate password
     async checkPassword(plainPassword, hashedPassword){

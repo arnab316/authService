@@ -35,3 +35,13 @@ This is a microservice for handling user authentication in a movie streaming app
 PORT=<Your_port_address>
 JWT_KEY=<your_jwt_secret_key>
 ```
+
+## Date and Time Management
+
+This application uses **Moment.js** for date and time manipulation. All timestamps are handled in **UTC** to ensure consistency across different platforms (Windows, Mac, Linux).
+
+### Key Features:
+- **UTC Standardization**: All date and time operations are performed in UTC to eliminate discrepancies caused by local time zones.
+- **Unix Timestamps**: The application utilizes Unix timestamps (seconds since January 1, 1970) for storing and comparing expiration times, ensuring uniform behavior regardless of the operating system.
+
+By adopting this approach, we ensure that the application behaves consistently across various environments and avoids common pitfalls related to time zone differences.

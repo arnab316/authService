@@ -40,7 +40,8 @@ await logMessage('authController', 'info', `Signup successful for user ${data.us
     } catch (error) {
         console.log(error);
  await logMessage('authController', 'error', `Signup failed: ${error.message}`);        
- handleError(res, error)
+//  handleError(res, error)
+  console.log(error);
     }
 };
 //? controller for login
@@ -73,25 +74,31 @@ const getAll = async(req, res) => {
         handleError(res, error)
     }
 }
-const validateToken = async(req, res) => {
+
+
+const validateToken = async (req, res) => {
     try {
-        const token = req.headers['authorization'].split(' ')[1];;
-        if (!token) {
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({
                 success: false,
-                message: 'Token is required for authentication',
+                message: 'Authorization header must be in the format: Bearer <token>',
             });
         }
+        
+        const token = authHeader.split(' ')[1];
         const decoded = await authService.validateToken(token);
-        await logMessage('authController', 'info', `token is valid ${decoded}`); 
+        
+        await logMessage('authController', 'info', `Token validated for user ${decoded.userId}`);
         return res.status(StatusCodes.OK).json({
             success: true,
             message: 'Token is valid',
             data: decoded,
         });
+        
     } catch (error) {
-        await logMessage('authController', 'error', ` token is not valid: ${error.message}`);
-        handleError(res, error)
+        await logMessage('authController', 'error', `Token validation failed: ${error.message}`);
+        handleError(res, error);
     }
 }
 
