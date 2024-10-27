@@ -20,9 +20,11 @@ async validateToken(token) {
 
         // Verify the JWT token
         const decoded = jwt.verify(token, JWT_KEY);
-
+        console.log(decoded.userId)
         // Token is valid and not expired, proceed with fetching the auth record
         const authRecord = await this.authRepository.getByField('token', token);
+        // const userResponse = await axios.get(`http://localhost:4001/api/v1/user/${decoded.username}`);
+
         if (!authRecord) {
             throw new AppError(
                 'UnauthorizedError',
@@ -32,7 +34,10 @@ async validateToken(token) {
             );
         }
 
-        return decoded;
+        return {
+            ...decoded,
+            // user: userResponse.data.data,
+        };
 
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
